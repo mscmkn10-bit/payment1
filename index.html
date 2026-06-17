@@ -1,176 +1,831 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Professional Payment Management System</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-body{background:#f5f7fb}
-.card-stat{border:none;border-radius:16px}
-.table-responsive{max-height:500px}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Records Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --dark-bg: #1e2229;
+            --dark-light: #2a303b;
+            --accent-color: #00d2ff;
+            --body-bg: #f4f6f9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--body-bg);
+            overflow-x: hidden;
+        }
+
+        /* Layout Structure */
+        #wrapper {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            background: var(--dark-bg);
+            color: #fff;
+            transition: all 0.3s;
+            position: fixed;
+            height: 100vh;
+            z-index: 1000;
+        }
+
+        #sidebar .sidebar-header {
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            font-weight: bold;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        #sidebar ul.components {
+            padding: 20px 0;
+        }
+
+        #sidebar ul li a {
+            padding: 12px 20px;
+            font-size: 1.1rem;
+            display: block;
+            color: #abc0d4;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        #sidebar ul li a:hover, #sidebar ul li.active > a {
+            color: #fff;
+            background: var(--dark-light);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        #content {
+            width: calc(100% - var(--sidebar-width));
+            padding: 30px;
+            margin-left: var(--sidebar-width);
+            transition: all 0.3s;
+        }
+
+        /* Dashboard Components */
+        .card-custom {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+            background: #fff;
+        }
+
+        .card-custom:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .table-responsive-wrapper {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-top: 25px;
+        }
+
+        /* Sticky Header Table */
+        .table-wrap {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa !important;
+            z-index: 2;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .table tbody tr {
+            transition: background-color 0.2s;
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(0, 210, 255, 0.04);
+        }
+
+        /* Global Overlay Loader */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.7);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Custom Toast Utilities */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1055;
+        }
+
+        /* Responsive Breakdowns */
+        @media (max-width: 768px) {
+            #sidebar {
+                margin-left: calc(-1 * var(--sidebar-width));
+            }
+            #sidebar.active {
+                margin-left: 0;
+            }
+            #content {
+                width: 100%;
+                margin-left: 0;
+            }
+            #content.active {
+                margin-left: var(--sidebar-width);
+            }
+            #sidebarCollapse {
+                display: block !important;
+            }
+        }
+
+        #sidebarCollapse {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-<div class="container-fluid p-4">
-<h2 class="mb-4">Payment Management Dashboard</h2>
 
-<div class="row g-3 mb-4">
-<div class="col-md-3"><div class="card card-stat"><div class="card-body"><h6>Total Entries</h6><h3 id="totalEntries">0</h3></div></div></div>
-<div class="col-md-3"><div class="card card-stat"><div class="card-body"><h6>Total Amount</h6><h3 id="totalAmountCard">₹0</h3></div></div></div>
-<div class="col-md-3"><div class="card card-stat"><div class="card-body"><h6>Total Received</h6><h3 id="totalReceivedCard">₹0</h3></div></div></div>
-<div class="col-md-3"><div class="card card-stat"><div class="card-body"><h6>Total Pending</h6><h3 id="totalPendingCard">₹0</h3></div></div></div>
-</div>
+    <div id="loadingOverlay">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
 
-<div class="card mb-4">
-<div class="card-body">
-<div class="row g-3">
-<div class="col-md-2"><input type="date" id="date" class="form-control"></div>
-<div class="col-md-2"><input type="text" id="applicant" class="form-control" placeholder="Applicant"></div>
-<div class="col-md-2"><input type="text" id="bank" class="form-control" placeholder="Bank"></div>
-<div class="col-md-2"><input type="number" id="total" class="form-control" placeholder="Total Amount"></div>
-<div class="col-md-2"><input type="number" id="challan" class="form-control" placeholder="Challan"></div>
-<div class="col-md-2"><input type="number" id="perchallan" class="form-control" placeholder="Per Challan"></div>
-<div class="col-md-2"><input type="number" id="received" class="form-control" placeholder="Received" readonly></div>
-<div class="col-md-2">
-<select id="status" class="form-select">
-<option>Pending</option>
-<option>Received</option>
-</select>
-</div>
-<div class="col-md-8 d-flex gap-2">
-<button class="btn btn-success" onclick="saveRecord()">Save</button>
-<button class="btn btn-primary" onclick="loadRecords()">Fetch</button>
-<button class="btn btn-secondary" onclick="exportCSV()">Excel</button>
-<button class="btn btn-danger" onclick="window.print()">PDF</button>
-</div>
-</div>
-</div>
-</div>
+    <div class="toast-container"></div>
 
-<div class="card">
-<div class="card-body">
-<div class="row mb-3">
-<div class="col-md-4"><input id="search" class="form-control" placeholder="Search Applicant" onkeyup="renderTable()"></div>
-<div class="col-md-3">
-<select id="filterStatus" class="form-select" onchange="renderTable()">
-<option value="">All Status</option>
-<option>Pending</option>
-<option>Received</option>
-</select>
-</div>
-</div>
+    <div id="wrapper">
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-shield-halved me-2"></i>FinDesk Admin
+            </div>
+            <ul class="components list-unstyled">
+                <li class="active">
+                    <a href="#" id="menuDashboard"><i class="fa-solid fa-chart-pie me-2"></i>Dashboard</a>
+                </li>
+                <li>
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#entryModal" onclick="prepareAddForm()"><i class="fa-solid fa-plus me-2"></i>New Entry</a>
+                </li>
+                <li>
+                    <a href="#" onclick="fetchRecords()"><i class="fa-solid fa-rotate me-2"></i>Sync Data</a>
+                </li>
+            </ul>
+        </nav>
 
-<div class="table-responsive">
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-<th>#</th><th>Date</th><th>Applicant</th><th>Bank</th><th>Total</th><th>Challan</th><th>Per Challan</th><th>Received</th><th>Status</th><th>Pending</th><th>Delete</th>
-</tr>
-</thead>
-<tbody id="tbody"></tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
+        <div id="content">
+            <nav class="navbar navbar-expand-lg navbar-light bg-light d-md-none rounded mb-4 shadow-sm">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn btn-dark">
+                        <i class="fas fa-align-left"></i>
+                    </button>
+                    <span class="navbar-text ms-3 fw-bold">FinDesk Menu</span>
+                </div>
+            </nav>
 
-<script>
-const WEBAPP_URL="https://script.google.com/macros/s/AKfycbwLc2FGROSx-VAMp2kUE5dvvhZfEMJb3ToZ9O4Ifv6c1DztDgVuB-bOE0m_xzbDMhqYUg/exec";
-let records=[];
+            <div class="row g-4 mb-4">
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card card-custom p-4 border-start border-primary border-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="text-muted text-uppercase small">Total Entries</h6>
+                                <h3 class="fw-bold mb-0" id="cardTotalEntries">0</h3>
+                            </div>
+                            <div class="bg-primary bg-opacity-10 p-3 rounded text-primary">
+                                <i class="fa-solid fa-list-ol fa-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card card-custom p-4 border-start border-success border-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="text-muted text-uppercase small">Total Amount</h6>
+                                <h3 class="fw-bold mb-0" id="cardTotalAmount">₹0</h3>
+                            </div>
+                            <div class="bg-success bg-opacity-10 p-3 rounded text-success">
+                                <i class="fa-solid fa-indian-rupee-sign fa-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card card-custom p-4 border-start border-info border-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="text-muted text-uppercase small">Total Received</h6>
+                                <h3 class="fw-bold mb-0" id="cardTotalReceived">₹0</h3>
+                            </div>
+                            <div class="bg-info bg-opacity-10 p-3 rounded text-info">
+                                <i class="fa-solid fa-wallet fa-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card card-custom p-4 border-start border-danger border-4">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h6 class="text-muted text-uppercase small">Total Pending</h6>
+                                <h3 class="fw-bold mb-0" id="cardTotalPending">₹0</h3>
+                            </div>
+                            <div class="bg-danger bg-opacity-10 p-3 rounded text-danger">
+                                <i class="fa-solid fa-clock-rotate-left fa-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-function calc(){
-received.value=(+total.value||0)-(+challan.value||0)-(+perchallan.value||0);
-}
-total.oninput=calc;
-challan.oninput=calc;
-perchallan.oninput=calc;
+            <div class="card card-custom p-4 mb-4">
+                <h5 class="fw-bold mb-3"><i class="fa-solid fa-sliders me-2"></i>Search & Filters</h5>
+                <div class="row g-3">
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <input type="text" id="filterApplicant" class="form-control" placeholder="Search by Applicant...">
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <input type="text" id="filterBank" class="form-control" placeholder="Search by Bank...">
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <select id="filterStatus" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Received">Received</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <input type="date" id="filterStartDate" class="form-control" title="Start Date">
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <input type="date" id="filterEndDate" class="form-control" title="End Date">
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mt-3 gap-2">
+                    <button class="btn btn-secondary btn-sm" onclick="clearFilters()"><i class="fa-solid fa-broom me-1"></i>Reset</button>
+                    <button class="btn btn-primary btn-sm" onclick="applyFilters()"><i class="fa-solid fa-filter me-1"></i>Apply Filters</button>
+                </div>
+            </div>
 
-async function saveRecord(){
-const rec={
-date:date.value,
-applicant:applicant.value,
-bank:bank.value,
-total:+total.value||0,
-challan:+challan.value||0,
-per:+perchallan.value||0,
-received:+received.value||0,
-status:status.value,
-pending:status.value==="Pending"?(+received.value||0):0
-};
+            <div class="table-responsive-wrapper">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h5 class="fw-bold mb-0" id="tableHeading">Financial Data Records</h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-success btn-sm" onclick="exportToExcel()"><i class="fa-solid fa-file-excel me-1"></i>Excel</button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="exportToPDF()"><i class="fa-solid fa-file-pdf me-1"></i>PDF</button>
+                        <button class="btn btn-outline-dark btn-sm" onclick="printReport()"><i class="fa-solid fa-print me-1"></i>Print</button>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#entryModal" onclick="prepareAddForm()"><i class="fa-solid fa-plus me-1"></i>Add Entry</button>
+                        <button class="btn btn-warning btn-sm text-dark" onclick="fetchRecords()"><i class="fa-solid fa-arrows-rotate me-1"></i>Fetch</button>
+                    </div>
+                </div>
 
-localStorage.setItem("lastRecord",JSON.stringify(rec));
+                <div class="table-wrap">
+                    <table class="table table-hover align-middle mb-0" id="recordsTable">
+                        <thead>
+                            <tr>
+                                <th>S.No</th>
+                                <th>Date</th>
+                                <th>Applicant Name</th>
+                                <th>Bank Name</th>
+                                <th>Total Amt</th>
+                                <th>Challan Amt</th>
+                                <th>Per Challan</th>
+                                <th>Received Amt</th>
+                                <th>Status</th>
+                                <th>Pending Amt</th>
+                                <th class="text-center no-print">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 
-if(WEBAPP_URL.startsWith("http")){
-await fetch(WEBAPP_URL,{method:"POST",body:JSON.stringify(rec)});
-}
-alert("Saved");
-loadRecords();
-}
+    <div class="modal fade" id="entryModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="entryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="entryModalLabel">Add New Financial Record</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" id="closeFormModalBtn"></button>
+                </div>
+                <form id="recordForm" novalidate onsubmit="handleFormSubmit(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="editIndex" value="">
+                        <input type="hidden" id="recordTimestamp" value="">
+                        
+                        <div class="row g-3">
+                            <div class="col-12 col-sm-6">
+                                <label for="formDate" class="form-label required-field">Date</label>
+                                <input type="date" class="form-control" id="formDate" required>
+                                <div class="invalid-feedback">Please select a date.</div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="formApplicantName" class="form-label">Applicant Name</label>
+                                <input type="text" class="form-control" id="formApplicantName" required placeholder="John Doe">
+                                <div class="invalid-feedback">Applicant name is required.</div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="formBankName" class="form-label">Bank Name</label>
+                                <input type="text" class="form-control" id="formBankName" required placeholder="State Bank Of India">
+                                <div class="invalid-feedback">Bank name is required.</div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="formTotalAmount" class="form-label">Total Amount (₹)</label>
+                                <input type="number" step="0.01" class="form-control calc-trigger" id="formTotalAmount" required value="0">
+                                <div class="invalid-feedback">Provide a valid total amount.</div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="formChallanAmount" class="form-label">Challan Amount (₹)</label>
+                                <input type="number" step="0.01" class="form-control calc-trigger" id="formChallanAmount" required value="0">
+                                <div class="invalid-feedback">Provide a valid challan amount.</div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="formPerChallanAmount" class="form-label">Per Challan Amount (₹)</label>
+                                <input type="number" step="0.01" class="form-control calc-trigger" id="formPerChallanAmount" required value="0">
+                                <div class="invalid-feedback">Provide a valid amount.</div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="formReceivedAmount" class="form-label">Received Amount (₹)</label>
+                                <input type="number" class="form-control bg-light" id="formReceivedAmount" readonly value="0">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="formStatus" class="form-label">Status</label>
+                                <select class="form-select calc-trigger" id="formStatus" required>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Received">Received</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label for="formPendingAmount" class="form-label">Pending Amount (₹)</label>
+                                <input type="number" class="form-control bg-light fw-bold text-danger" id="formPendingAmount" readonly value="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success" id="saveBtn"><i class="fa-solid fa-floppy-disk me-1"></i>Save Entry</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-async function loadRecords(){
-if(WEBAPP_URL.startsWith("http")){
-try{
-const r=await fetch(WEBAPP_URL);
-records=await r.json();
-}catch(e){}
-}
-renderTable();
-}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-function renderTable(){
-const tb=document.getElementById("tbody");
-tb.innerHTML="";
-let q=document.getElementById("search").value.toLowerCase();
-let st=document.getElementById("filterStatus").value;
+    <script>
+        // Google Apps Script endpoint deployment configuration URL
+        const API_ENDPOINT = "https://script.google.com/macros/s/AKfycbz44lfvWtHFdbDc5rTsA70VpFe1xW6QJ3WMMKDwweGaZ4LwlSoGff8OSfPuo5kjd1ay/exec";
+        
+        // Cache management state parameters
+        let localDataMemory = [];
+        let submissionInFlight = false;
+        let activeBootstrapModalObj = null;
 
-let totalAmt=0,totalRec=0,totalPend=0,count=0;
+        document.addEventListener("DOMContentLoaded", () => {
+            activeBootstrapModalObj = new bootstrap.Modal(document.getElementById('entryModal'));
+            
+            // Initialization steps
+            initSidebarToggle();
+            bindDynamicCalculations();
+            loadCachedData();
+            fetchRecords(); // Dynamic remote payload sync call
+        });
 
-records.filter(r=>{
-let a=(r["Applicant Name"]||r.applicant||"").toLowerCase().includes(q);
-let b=!st || (r["Status"]||r.status)==st;
-return a&&b;
-}).forEach((r,i)=>{
-count++;
-let total=+(r["Total Amount"]||r.total||0);
-let recv=+(r["Received Amount"]||r.received||0);
-let pend=+(r["Pending Amount"]||r.pending||0);
-totalAmt+=total;
-totalRec+=recv;
-totalPend+=pend;
+        function showLoading(displayState) {
+            document.getElementById('loadingOverlay').style.display = displayState ? 'flex' : 'none';
+        }
 
-tb.innerHTML+=`<tr>
-<td>${i+1}</td>
-<td>${r["Date"]||r.date||""}</td>
-<td>${r["Applicant Name"]||r.applicant||""}</td>
-<td>${r["Bank Name"]||r.bank||""}</td>
-<td>${total}</td>
-<td>${r["Challan Amount"]||r.challan||0}</td>
-<td>${r["Per Challan Amount"]||r.per||0}</td>
-<td>${recv}</td>
-<td>${r["Status"]||r.status||""}</td>
-<td>${pend}</td>
-<td><button class='btn btn-sm btn-danger'>X</button></td>
-</tr>`;
-});
+        function createToastNotification(message, contextualClass = 'success') {
+            const container = document.querySelector('.toast-container');
+            const toastUid = 'toast_' + Date.now();
+            const markup = `
+                <div id="${toastUid}" class="toast align-items-center text-white bg-${contextualClass} border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
+                    <div class="d-flex">
+                        <div class="toast-body"><i class="fa-solid fa-circle-info me-2"></i>${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>`;
+            container.insertAdjacentHTML('beforeend', markup);
+            const domRef = document.getElementById(toastUid);
+            const inst = new bootstrap.Toast(domRef);
+            inst.show();
+            domRef.addEventListener('hidden.bs.toast', () => domRef.remove());
+        }
 
-totalEntries.innerText=count;
-totalAmountCard.innerText="₹"+totalAmt;
-totalReceivedCard.innerText="₹"+totalRec;
-totalPendingCard.innerText="₹"+totalPend;
-}
+        function initSidebarToggle() {
+            const trigger = document.getElementById('sidebarCollapse');
+            if(trigger) {
+                trigger.addEventListener('click', () => {
+                    document.getElementById('sidebar').classList.toggle('active');
+                    document.getElementById('content').classList.toggle('active');
+                });
+            }
+        }
 
-function exportCSV(){
-let csv="Date,Applicant,Bank,Total,Received,Status\n";
-records.forEach(r=>{
-csv += `${r.date||""},${r.applicant||""},${r.bank||""},${r.total||0},${r.received||0},${r.status||""}\n`;
-});
-let blob=new Blob([csv],{type:"text/csv"});
-let a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="payments.csv";
-a.click();
-}
-</script>
+        // Real-time UI Business Logic Arithmetic calculations handling equations:
+        // Received Amount = Total Amount - Challan Amount - Per Challan Amount
+        // If Status == Pending then Pending Amount = Received Amount, Else 0
+        function bindDynamicCalculations() {
+            const reactiveElements = document.querySelectorAll('.calc-trigger');
+            reactiveElements.forEach(el => {
+                el.addEventListener('input', runFinancialFormCalculations);
+            });
+        }
+
+        function runFinancialFormCalculations() {
+            const amtTot = parseFloat(document.getElementById('formTotalAmount').value) || 0;
+            const amtChl = parseFloat(document.getElementById('formChallanAmount').value) || 0;
+            const amtPer = parseFloat(document.getElementById('formPerChallanAmount').value) || 0;
+            const statusNode = document.getElementById('formStatus').value;
+
+            const targetReceived = amtTot - amtChl - amtPer;
+            document.getElementById('formReceivedAmount').value = targetReceived.toFixed(2);
+
+            let targetPending = 0;
+            if (statusNode === 'Pending') {
+                targetPending = targetReceived;
+            }
+
+            document.getElementById('formPendingAmount').value = targetPending.toFixed(2);
+        }
+
+        // Form processing states reset
+        function prepareAddForm() {
+            document.getElementById('recordForm').reset();
+            document.getElementById('recordForm').classList.remove('was-validated');
+            document.getElementById('editIndex').value = "";
+            document.getElementById('recordTimestamp').value = "";
+            document.getElementById('entryModalLabel').innerText = "Add New Financial Record";
+            
+            // Set current local context date natively
+            const dateObj = new Date();
+            const formatStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
+            document.getElementById('formDate').value = formatStr;
+            runFinancialFormCalculations();
+        }
+
+        // Fallback Local Storage Data Sync Infrastructure
+        function loadCachedData() {
+            const cachedString = localStorage.getItem('fin_dash_cache');
+            if (cachedString) {
+                try {
+                    localDataMemory = JSON.parse(cachedString);
+                    renderTableAndMetrics(localDataMemory);
+                } catch(e) {
+                    console.error("Cache processing failure exception", e);
+                }
+            }
+        }
+
+        function saveToCache(dataSet) {
+            localStorage.setItem('fin_dash_cache', JSON.stringify(dataSet));
+        }
+
+        // Dynamic Calculations Interface Parsing Metric Nodes View
+        function renderTableAndMetrics(recordsArray) {
+            const bodyRef = document.getElementById('tableBody');
+            bodyRef.innerHTML = '';
+
+            let aggregatedTotal = 0;
+            let aggregatedReceived = 0;
+            let aggregatedPending = 0;
+
+            if(!recordsArray || recordsArray.length === 0) {
+                bodyRef.innerHTML = `<tr><td colspan="11" class="text-center text-muted py-4">No data records found. Click 'Fetch' to reload from source.</td></tr>`;
+            } else {
+                recordsArray.forEach((row, iterator) => {
+                    const parsedTotal = parseFloat(row.totalAmount) || 0;
+                    const parsedReceived = parseFloat(row.receivedAmount) || 0;
+                    const parsedPending = parseFloat(row.pendingAmount) || 0;
+
+                    aggregatedTotal += parsedTotal;
+                    aggregatedReceived += parsedReceived;
+                    aggregatedPending += parsedPending;
+
+                    // Display system date formatting constraints transformation conversion: DD/MM/YYYY natively 
+                    let renderedDate = row.date;
+                    if(renderedDate && renderedDate.includes('-')) {
+                        const chunks = renderedDate.split('-');
+                        if(chunks[0].length === 4) { // ISO configuration profile match checking
+                            renderedDate = `${chunks[2]}/${chunks[1]}/${chunks[0]}`;
+                        }
+                    }
+
+                    const badgeClass = row.status === 'Received' ? 'bg-success' : 'bg-danger';
+
+                    const tableRowMarkup = `
+                        <tr>
+                            <td>${iterator + 1}</td>
+                            <td>${renderedDate}</td>
+                            <td class="fw-semibold">${escapeHTML(row.applicantName)}</td>
+                            <td>${escapeHTML(row.bankName)}</td>
+                            <td>₹${parsedTotal.toFixed(2)}</td>
+                            <td>₹${(parseFloat(row.challanAmount) || 0).toFixed(2)}</td>
+                            <td>₹${(parseFloat(row.perChallanAmount) || 0).toFixed(2)}</td>
+                            <td class="text-success fw-bold">₹${parsedReceived.toFixed(2)}</td>
+                            <td><span class="badge ${badgeClass}">${row.status}</span></td>
+                            <td class="text-danger fw-bold">₹${parsedPending.toFixed(2)}</td>
+                            <td class="text-center no-print">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="initiateEditRow(${iterator})" title="Edit Row Data"><i class="fa-solid fa-pen-to-square"></i></button>
+                                    <button class="btn btn-outline-danger" onclick="initiateDeleteRow(${iterator})" title="Delete Row Record"><i class="fa-solid fa-trash-can"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
+                    bodyRef.insertAdjacentHTML('beforeend', tableRowMarkup);
+                });
+            }
+
+            // Bind values dynamically inside dashboard elements metrics cards
+            document.getElementById('cardTotalEntries').innerText = recordsArray.length;
+            document.getElementById('cardTotalAmount').innerText = '₹' + aggregatedTotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits:2});
+            document.getElementById('cardTotalReceived').innerText = '₹' + aggregatedReceived.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits:2});
+            document.getElementById('cardTotalPending').innerText = '₹' + aggregatedPending.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits:2});
+        }
+
+        // Escape helper sequence to manage rendering vector safety issues against input contexts injection vectors
+        function escapeHTML(payload) {
+            if(!payload) return '';
+            return String(payload).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // CRUD Application Core - Engine Operations Channels (Fetch Async Handler Operations Sequence Engine Link)
+        async function fetchRecords() {
+            showLoading(true);
+            try {
+                const queryParam = `?action=read&_ts=${Date.now()}`;
+                const connectionStream = await fetch(API_ENDPOINT + queryParam, { method: 'GET', mode: 'cors' });
+                
+                if (!connectionStream.ok) throw new Error(`HTTP network processing error status context flags code state: ${connectionStream.status}`);
+                
+                const remotePayloadJson = await connectionStream.json();
+                
+                if(remotePayloadJson && remotePayloadJson.status === "success") {
+                    localDataMemory = remotePayloadJson.data || [];
+                    saveToCache(localDataMemory);
+                    renderTableAndMetrics(localDataMemory);
+                    createToastNotification("System state synchronized successfully with cloud workspace.");
+                } else {
+                    throw new Error(remotePayloadJson.message || "Failed to structure payload processing operations parsing.");
+                }
+            } catch(errorLogs) {
+                console.error("Runtime connectivity execution failure logs context stack trace trace: ", errorLogs);
+                createToastNotification(`Fetch Sync error exception occurred: ${errorLogs.message}. Loading from local backup device cache storage safely.`, 'warning');
+                loadCachedData();
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Write Operations Sequence (Add & Update Route Logic processing mapping channels)
+        async function handleFormSubmit(eventEvent) {
+            eventEvent.preventDefault();
+            const TargetFormElement = document.getElementById('recordForm');
+
+            if (!TargetFormElement.checkValidity()) {
+                eventEvent.stopPropagation();
+                TargetFormElement.classList.add('was-validated');
+                return;
+            }
+
+            if(submissionInFlight) return; // Prevent dual form event triggers concurrency submission locking mitigation route map block
+            submissionInFlight = true;
+            showLoading(true);
+
+            const recordRowIndex = document.getElementById('editIndex').value;
+            
+            const entityTransactionData = {
+                date: document.getElementById('formDate').value,
+                applicantName: document.getElementById('formApplicantName').value.trim(),
+                bankName: document.getElementById('formBankName').value.trim(),
+                totalAmount: parseFloat(document.getElementById('formTotalAmount').value) || 0,
+                challanAmount: parseFloat(document.getElementById('formChallanAmount').value) || 0,
+                perChallanAmount: parseFloat(document.getElementById('formPerChallanAmount').value) || 0,
+                receivedAmount: parseFloat(document.getElementById('formReceivedAmount').value) || 0,
+                status: document.getElementById('formStatus').value,
+                pendingAmount: parseFloat(document.getElementById('formPendingAmount').value) || 0,
+                timestamp: document.getElementById('recordTimestamp').value || new Date().toISOString()
+            };
+
+            // Duplication check across application processing vectors models runtime environment boundaries operations layer properties state blocks constraints configurations verification mapping operations array
+            const structuralCollisionMatchCheck = localDataMemory.some((item, traceIndex) => {
+                if (recordRowIndex !== "" && parseInt(recordRowIndex) === traceIndex) return false;
+                return item.applicantName.toLowerCase() === entityTransactionData.applicantName.toLowerCase() && 
+                       item.date === entityTransactionData.date && 
+                       parseFloat(item.totalAmount) === entityTransactionData.totalAmount;
+            });
+
+            if(structuralCollisionMatchCheck) {
+                createToastNotification("A matching data record with identical entry details already exists.", "danger");
+                showLoading(false);
+                submissionInFlight = false;
+                return;
+            }
+
+            let processingActionUrlParameter = "create";
+            if (recordRowIndex !== "") {
+                processingActionUrlParameter = "update";
+            }
+
+            try {
+                const processingPayloadParameters = new URLSearchParams();
+                processingPayloadParameters.append("action", processingActionUrlParameter);
+                processingPayloadParameters.append("rowData", JSON.stringify(entityTransactionData));
+
+                const operationsNetworkResponseStream = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: processingPayloadParameters.toString()
+                });
+
+                const processingResultDetails = await operationsNetworkResponseStream.json();
+
+                if(processingResultDetails && processingResultDetails.status === "success") {
+                    createToastNotification(`Record successfully written and saved to workspace cloud spreadsheet!`);
+                    
+                    // Close standard interface modals structures actions
+                    document.getElementById('closeFormModalBtn').click();
+                    
+                    // Re-sync UI dynamically from central state database mappings structures logs configurations trace operations
+                    await fetchRecords();
+                } else {
+                    throw new Error(processingResultDetails.message || "Spreadsheet processing rejected written data packet payload structures schema mappings.");
+                }
+            } catch(networkProcessingException) {
+                console.error("Write tracking operations fatal exceptions log errors stack trace contextual layout processing:", networkProcessingException);
+                createToastNotification(`Cloud sync operation error: ${networkProcessingException.message}. Transaction terminated safely.`, 'danger');
+            } finally {
+                showLoading(false);
+                submissionInFlight = false;
+            }
+        }
+
+        function initiateEditRow(targetMemoryIndex) {
+            const sourceObjectNode = localDataMemory[targetMemoryIndex];
+            if(!sourceObjectNode) return;
+
+            document.getElementById('editIndex').value = targetMemoryIndex;
+            document.getElementById('recordTimestamp').value = sourceObjectNode.timestamp || '';
+            
+            document.getElementById('formDate').value = sourceObjectNode.date;
+            document.getElementById('formApplicantName').value = sourceObjectNode.applicantName;
+            document.getElementById('formBankName').value = sourceObjectNode.bankName;
+            document.getElementById('formTotalAmount').value = sourceObjectNode.totalAmount;
+            document.getElementById('formChallanAmount').value = sourceObjectNode.challanAmount;
+            document.getElementById('formPerChallanAmount').value = sourceObjectNode.perChallanAmount;
+            document.getElementById('formStatus').value = sourceObjectNode.status;
+
+            document.getElementById('entryModalLabel').innerText = "Modify Existing Record";
+            runFinancialFormCalculations();
+            
+            activeBootstrapModalObj.show();
+        }
+
+        async function initiateDeleteRow(targetMemoryIndex) {
+            const targetItemNode = localDataMemory[targetMemoryIndex];
+            if(!targetItemNode) return;
+
+            const userPromptConfirmationText = `Are you certain you wish to completely delete the transaction record for "${targetItemNode.applicantName}" dated ${targetItemNode.date}? This action cannot be undone.`;
+            if(!confirm(userPromptConfirmationText)) return;
+
+            showLoading(true);
+            try {
+                const deletionPayloadParameters = new URLSearchParams();
+                deletionPayloadParameters.append("action", "delete");
+                deletionPayloadParameters.append("timestamp", targetItemNode.timestamp);
+
+                const dataStreamLinkConnection = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    mode: 'cors',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: deletionPayloadParameters.toString()
+                });
+
+                const structuralResultPayload = await dataStreamLinkConnection.json();
+
+                if(structuralResultPayload && structuralResultPayload.status === "success") {
+                    createToastNotification("The selected transaction has been permanently removed.");
+                    await fetchRecords();
+                } else {
+                    throw new Error(structuralResultPayload.message || "Cloud interface pipeline dropped deletion transaction data command processing packets mapping structures layout context trace operations logic.");
+                }
+            } catch(errorPayloadCatchTrace) {
+                console.error("Deletion lifecycle exception: ", errorPayloadCatchTrace);
+                createToastNotification(`Deletion interface failure error log: ${errorPayloadCatchTrace.message}`, 'danger');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Filtering Logic Engine Interface Layer Implementation mapping channels components processing layout logic data operations properties parameters fields structures objects profiles
+        function clearFilters() {
+            document.getElementById('filterApplicant').value = '';
+            document.getElementById('filterBank').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            renderTableAndMetrics(localDataMemory);
+            document.getElementById('tableHeading').innerText = "Financial Data Records";
+        }
+
+        function applyFilters() {
+            const matchApp = document.getElementById('filterApplicant').value.toLowerCase().trim();
+            const matchBnk = document.getElementById('filterBank').value.toLowerCase().trim();
+            const matchSts = document.getElementById('filterStatus').value;
+            const startDStr = document.getElementById('filterStartDate').value;
+            const endDStr = document.getElementById('filterEndDate').value;
+
+            const evaluationDataSetFiltered = localDataMemory.filter(row => {
+                const valApp = row.applicantName.toLowerCase();
+                const valBnk = row.bankName.toLowerCase();
+                const valSts = row.status;
+                const rowDateRaw = row.date; 
+
+                if (matchApp && !valApp.includes(matchApp)) return false;
+                if (matchBnk && !valBnk.includes(matchBnk)) return false;
+                if (matchSts && valSts !== matchSts) return false;
+                
+                if (startDStr && rowDateRaw < startDStr) return false;
+                if (endDStr && rowDateRaw > endDStr) return false;
+
+                return true;
+            });
+
+            renderTableAndMetrics(evaluationDataSetFiltered);
+            document.getElementById('tableHeading').innerText = `Financial Data Records (Filtered: Found ${evaluationDataSetFiltered.length} matches)`;
+        }
+
+        // Reporting Modules Integration Framework Layout Systems Components Processing Engines
+        function exportToExcel() {
+            if(localDataMemory.length === 0) {
+                alert("There are no records currently available to execute an Excel workbook conversion operation export package mapping.");
+                return;
+            }
+
+            const structuredDataExportArray = localDataMemory.map((item, index) => ({
+                "S.No": index + 1,
+                "Date": item.date,
+                "Applicant Name": item.applicantName,
+                "Bank Name": item.bankName,
+                "Total Amount": parseFloat(item.totalAmount) || 0,
+                "Challan Amount": parseFloat(item.challanAmount) || 0,
+                "Per Challan Amount": parseFloat(item.perChallanAmount) || 0,
+                "Received Amount": parseFloat(item.receivedAmount) || 0,
+                "Status": item.status,
+                "Pending Amount": parseFloat(item.pendingAmount) || 0,
+                "Timestamp": item.timestamp
+            }));
+
+            const processingWorksheetRef = XLSX.utils.json_to_sheet(structuredDataExportArray);
+            const processingWorkbookBookRef = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(processingWorkbookBookRef, processingWorksheetRef, "Financial Records Summary");
+            
+            XLSX.writeFile(processingWorkbookBookRef, `Finance_Report_Export_${Date.now()}.xlsx`);
+        }
+
+        function exportToPDF() {
+            const applicationTargetTableElementNode = document.getElementById('recordsTable');
+            
+            const outputConfigurationSettingsLayout = {
+                margin:       [10, 10, 10, 10],
+                filename:     `Finance_Report_Manifest_${Date.now()}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+
+            html2pdf().set(outputConfigurationSettingsLayout).from(applicationTargetTableElementNode).save();
+        }
+
+        function printReport() {
+            window.print();
+        }
+    </script>
 </body>
 </html>
